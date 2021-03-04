@@ -62,7 +62,7 @@ def main(args):
 
         frame_bgr = frame[..., ::-1]  # RGB->BGR
 
-        if i == 0:
+        if i == 0 or i == args.start:
             # detect
             boxes = face_boxes(frame_bgr)
             boxes = [boxes[0]]
@@ -89,6 +89,10 @@ def main(args):
             # todo: add confidence threshold to judge the tracking is failed
             if abs(roi_box[2] - roi_box[0]) * abs(roi_box[3] - roi_box[1]) < 2020:
                 boxes = face_boxes(frame_bgr)
+                if len(boxes) == 0:
+                    print(f"[NO FACE] Frame {i}.")
+                    writer.append_data(frame_bgr[:, :, ::-1])
+                    continue
                 boxes = [boxes[0]]
                 param_lst, roi_box_lst = tddfa(frame_bgr, boxes)
 
