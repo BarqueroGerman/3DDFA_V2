@@ -45,12 +45,19 @@ def viz_bbox(img, dets, wfp='out.jpg'):
 
 
 class FaceBoxes:
-    def __init__(self, timer_flag=False):
+    def __init__(self, timer_flag=False, gpu_mode=False, gpu_id=0):
         torch.set_grad_enabled(False)
 
         net = FaceBoxesNet(phase='test', size=None, num_classes=2)  # initialize detector
-        self.net = load_model(net, pretrained_path=pretrained_path, load_to_cpu=True)
+        self.net = load_model(net, pretrained_path=pretrained_path, load_to_cpu=not gpu_mode)
         self.net.eval()
+
+        if gpu_mode:
+            self.net = self.net.cuda(device=gpu_id)
+            print(f"Loading FaceBoxes to GPU (id={gpu_id})...")
+
+        self.gpu_mode = gpu_mode
+        self.gpu_id = gpu_id
         # print('Finished loading model!')
 
         self.timer_flag = timer_flag
@@ -88,6 +95,9 @@ class FaceBoxes:
         img = img.transpose(2, 0, 1)
         img = torch.from_numpy(img).unsqueeze(0)
 
+        if self.gpu_mode:
+            img = img.cuda(device=self.gpu_id)
+
         _t['forward_pass'].tic()
         loc, conf = self.net(img)  # forward pass
         _t['forward_pass'].toc()
@@ -95,7 +105,13 @@ class FaceBoxes:
         priorbox = PriorBox(image_size=(im_height, im_width))
         priors = priorbox.forward()
         prior_data = priors.data
-        boxes = decode(loc.data.squeeze(0), prior_data, cfg['variance'])
+        loc_data = loc.data.squeeze(0)
+        
+        if self.gpu_mode:
+            prior_data = prior_data.cuda(self.gpu_id)
+            loc_data = loc_data.cuda(self.gpu_id)
+
+        boxes = decode(loc.data.squeeze(0), prior_data, cfg['variance']).cpu()
         if scale_flag:
             boxes = boxes * scale_bbox / scale / resize
         else:

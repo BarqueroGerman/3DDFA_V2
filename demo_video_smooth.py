@@ -41,7 +41,7 @@ def main(args):
 
     fps = reader.get_meta_data()['fps']
     suffix = get_suffix(args.video_fp)
-    video_wfp = f'examples/results/videos/{fn.replace(suffix, "")}_{args.opt}_smooth.mp4'
+    video_wfp = f'examples/results/videos/{args.output_name}_{args.opt}_smooth.mp4'
     writer = imageio.get_writer(video_wfp, fps=fps)
 
     # the simple implementation of average smoothing by looking ahead by n_next frames
@@ -149,6 +149,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='The smooth demo of video of 3DDFA_V2')
     parser.add_argument('-c', '--config', type=str, default='configs/mb1_120x120.yml')
+    parser.add_argument('-out', '--output_name', type=str, default='unnamed')
     parser.add_argument('-f', '--video_fp', type=str)
     parser.add_argument('-m', '--mode', default='cpu', type=str, help='gpu or cpu mode')
     parser.add_argument('-n_pre', default=1, type=int, help='the pre frames of smoothing')

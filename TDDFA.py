@@ -13,6 +13,7 @@ import torch.backends.cudnn as cudnn
 import models
 from bfm import BFMModel
 from utils.io import _load
+from utils.pose import calc_pose
 from utils.functions import (
     crop_img, parse_roi_box_from_bbox, parse_roi_box_from_landmark,
 )
@@ -42,6 +43,8 @@ class TDDFA(object):
         self.gpu_mode = kvs.get('gpu_mode', False)
         self.gpu_id = kvs.get('gpu_id', 0)
         self.size = kvs.get('size', 120)
+        if self.gpu_mode:
+            print(f"Loading 3DDFA_v2 to GPU (id={self.gpu_id})...")
 
         param_mean_std_fp = kvs.get(
             'param_mean_std_fp', make_abs_path(f'configs/param_mean_std_62d_{self.size}x{self.size}.pkl')
@@ -57,6 +60,7 @@ class TDDFA(object):
         model = load_model(model, kvs.get('checkpoint_fp'))
 
         if self.gpu_mode:
+            print("Loading 3DDFA_v2 model to GPU...")
             cudnn.benchmark = True
             model = model.cuda(device=self.gpu_id)
 
@@ -86,15 +90,18 @@ class TDDFA(object):
         # Crop image, forward to get the param
         param_lst = []
         roi_box_lst = []
+        poses = []
+        confidences = []
 
         crop_policy = kvs.get('crop_policy', 'box')
         for obj in objs:
             if crop_policy == 'box':
                 # by face box
-                roi_box = parse_roi_box_from_bbox(obj)
+                roi_box, conf = parse_roi_box_from_bbox(obj)
             elif crop_policy == 'landmark':
                 # by landmarks
                 roi_box = parse_roi_box_from_landmark(obj)
+                conf = -1
             else:
                 raise ValueError(f'Unknown crop policy {crop_policy}')
 
@@ -119,7 +126,10 @@ class TDDFA(object):
             # print('output', param)
             param_lst.append(param)
 
-        return param_lst, roi_box_lst
+            if kvs.get('retrieve_pose', False):
+                poses.append(calc_pose(param)[1])
+
+        return param_lst, roi_box_lst, poses, confidences
 
     def recon_vers(self, param_lst, roi_box_lst, **kvs):
         dense_flag = kvs.get('dense_flag', False)
@@ -141,3 +151,4 @@ class TDDFA(object):
             ver_lst.append(pts3d)
 
         return ver_lst
+

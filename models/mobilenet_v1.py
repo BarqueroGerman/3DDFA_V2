@@ -54,6 +54,8 @@ class MobileNet(nn.Module):
         """
         super(MobileNet, self).__init__()
 
+        print("[LOADED] MobileNetV3")
+
         block = DepthWiseBlock
         self.conv1 = nn.Conv2d(input_channel, int(32 * widen_factor), kernel_size=3, stride=2, padding=1,
                                bias=False)

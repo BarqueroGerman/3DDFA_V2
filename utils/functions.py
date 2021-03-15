@@ -49,6 +49,8 @@ def crop_img(img, roi_box):
     else:
         dey = dh
 
+    if not (img[sy:ey, sx:ex].shape == res[dsy:dey, dsx:dex].shape):
+        return None
     res[dsy:dey, dsx:dex] = img[sy:ey, sx:ex]
     return res
 
@@ -95,7 +97,7 @@ def parse_roi_box_from_bbox(bbox):
     roi_box[2] = roi_box[0] + size
     roi_box[3] = roi_box[1] + size
 
-    return roi_box
+    return roi_box, bbox[4]
 
 
 def plot_image(img):

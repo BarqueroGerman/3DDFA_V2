@@ -13,6 +13,7 @@ from utils.functions import (
     crop_img, parse_roi_box_from_bbox, parse_roi_box_from_landmark,
 )
 from utils.tddfa_util import _parse_param, similar_transform
+from utils.pose import calc_pose
 from bfm.bfm import BFMModel
 from bfm.bfm_onnx import convert_bfm_to_onnx
 
@@ -68,20 +69,26 @@ class TDDFA_ONNX(object):
         # Crop image, forward to get the param
         param_lst = []
         roi_box_lst = []
+        poses = []
+        confidences = []
 
         crop_policy = kvs.get('crop_policy', 'box')
         for obj in objs:
             if crop_policy == 'box':
                 # by face box
-                roi_box = parse_roi_box_from_bbox(obj)
+                roi_box, conf = parse_roi_box_from_bbox(obj)
             elif crop_policy == 'landmark':
                 # by landmarks
                 roi_box = parse_roi_box_from_landmark(obj)
+                conf = -1
             else:
                 raise ValueError(f'Unknown crop policy {crop_policy}')
 
             roi_box_lst.append(roi_box)
+            confidences.append(conf)
             img = crop_img(img_ori, roi_box)
+            if img is None:
+                return None, None, None, None
             img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
             img = img.astype(np.float32).transpose(2, 0, 1)[np.newaxis, ...]
             img = (img - 127.5) / 128.
@@ -93,7 +100,10 @@ class TDDFA_ONNX(object):
             param = param * self.param_std + self.param_mean  # re-scale
             param_lst.append(param)
 
-        return param_lst, roi_box_lst
+            if kvs.get('retrieve_pose', False):
+                poses.append(calc_pose(param)[1])
+
+        return param_lst, roi_box_lst, poses, confidences
 
     def recon_vers(self, param_lst, roi_box_lst, **kvs):
         dense_flag = kvs.get('dense_flag', False)
@@ -116,3 +126,4 @@ class TDDFA_ONNX(object):
             ver_lst.append(pts3d)
 
         return ver_lst
+

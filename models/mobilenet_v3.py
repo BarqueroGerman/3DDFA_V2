@@ -119,6 +119,9 @@ class MobileBottleneck(nn.Module):
 class MobileNetV3(nn.Module):
     def __init__(self, widen_factor=1.0, num_classes=141, num_landmarks=136, input_size=120, mode='small'):
         super(MobileNetV3, self).__init__()
+
+        print("[LOADED] MobileNetV3")
+        
         input_channel = 16
         last_channel = 1280
         if mode == 'large':
