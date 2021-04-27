@@ -106,6 +106,7 @@ class TDDFA(object):
                 raise ValueError(f'Unknown crop policy {crop_policy}')
 
             roi_box_lst.append(roi_box)
+            confidences.append(conf)
             img = crop_img(img_ori, roi_box)
             img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
             inp = self.transform(img).unsqueeze(0)
